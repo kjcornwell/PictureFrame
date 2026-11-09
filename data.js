@@ -125,7 +125,20 @@ function assemble(now, todayKey, curve, events, cur, water, wind, press, isMock)
     isMock:isMock
   };
 }
-function minClock(d){var h=d.getHours(),m=d.getMinutes(),ap=h>=12?"pm":"am";h=h%12;if(h===0)h=12;return h+":"+pad(m)+" "+ap;}
+// Format an instant in the STATION timezone (robust to a wrong device tz).
+function minClock(d){
+  try{
+    var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
+      .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
+    return p.hour+":"+p.minute+" "+(p.dayPeriod||"").toLowerCase();
+  }catch(e){ var h=d.getHours(),m=d.getMinutes(),ap=h>=12?"pm":"am";h=h%12;if(h===0)h=12;return h+":"+pad(m)+" "+ap; }
+}
+// Minutes-since-midnight of an instant, in the STATION timezone (for x-axis placement).
+window.__tzMins=function(d){
+  try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"2-digit",minute:"2-digit",hour12:false})
+      .formatToParts(d).forEach(function(x){p[x.type]=x.value;}); return (parseInt(p.hour,10)%24)*60+parseInt(p.minute,10); }
+  catch(e){ return d.getHours()*60+d.getMinutes(); }
+};
 function fmtDate(d){var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return mo[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();}
 function phaseName(p){

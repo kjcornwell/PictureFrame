@@ -98,7 +98,7 @@ function renderGraph(m){
 function axisGlyphs(m){
   var g=[],dObj=new Date(m.now.y,m.now.mo-1,m.now.d);
   var sun=window.SunCalc.getTimes(dObj,C.lat,C.lon),mt=window.SunCalc.getMoonTimes(dObj,C.lat,C.lon);
-  function mins(d){return d.getHours()*60+d.getMinutes();}
+  function mins(d){return window.__tzMins ? window.__tzMins(d) : (d.getHours()*60+d.getMinutes());}
   if(sun.sunrise)g.push({min:mins(sun.sunrise),ic:"☀"}); if(sun.sunset)g.push({min:mins(sun.sunset),ic:"☀"});
   if(mt.rise)g.push({min:mins(mt.rise),ic:"☽"}); if(mt.set)g.push({min:mins(mt.set),ic:"☽"});
   return g;
