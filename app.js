@@ -192,9 +192,18 @@ function compactClock(d){
       .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
     return p.hour+":"+p.minute+((p.dayPeriod||"").toLowerCase()==="am"?"a":"p"); }catch(e){ return ""; }
 }
+// Clock ticks on the second boundary; the instant the minute rolls over, the chart's now-line,
+// time bubble and current height are re-ticked so they never lag the clock.
 function startClock(){
-  function tick(){ var t=clockLabel(); if(t) $("clock").textContent=t; }
-  tick(); setInterval(tick,1000);
+  var lastMin=null;
+  function tick(){
+    var t=clockLabel(); if(t) $("clock").textContent=t;
+    var mk=nowTimeLabel();
+    if(lastMin!==null && mk!==lastMin && lastModel){ try{ render(window.OceanData.retick(lastModel)); }catch(e){ console.log("[OceanTide] retick",e); } }
+    lastMin=mk;
+    setTimeout(tick, 1000-(Date.now()%1000)+5);
+  }
+  tick();
 }
 var lastModel=null;
 function render(m){ lastModel=m; applyTheme(m.now.h);renderHeader(m);renderFooter(m);renderGraph(m);}
@@ -217,6 +226,4 @@ var cached=cacheLoad(); if(cached){try{render(cached);}catch(e){}}
 refresh();
 // Full data refresh on the configured cadence (fetches in live mode).
 setInterval(refresh,Math.max(5,C.refreshMinutes)*60*1000);
-// Local re-tick every minute: move the now-marker + re-theme, NO network.
-setInterval(function(){ if(lastModel){ try{ render(window.OceanData.retick(lastModel)); }catch(e){} } },60*1000);
 })();
