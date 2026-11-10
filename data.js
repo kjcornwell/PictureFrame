@@ -84,13 +84,14 @@ function buildLive(){
     var water=res[1]&&res[1].data&&res[1].data[0]&&isFinite(parseFloat(res[1].data[0].v))
       ? Math.round(parseFloat(res[1].data[0].v))+C.units.temp : "--";
     var wx=res[2]&&res[2].current?res[2].current:null;
-    var windStr="--", pressStr="--", humStr="--";
+    var windStr="--", pressStr="--", humStr="--", airStr="--";
     if(wx){
       windStr=degToCompass(wx.wind_direction_10m)+" "+Math.round(wx.wind_speed_10m);
       pressStr=(wx.surface_pressure*0.02953).toFixed(2)+" in";
       if(isFinite(wx.relative_humidity_2m)) humStr=Math.round(wx.relative_humidity_2m)+"%";
+      if(isFinite(wx.temperature_2m)) airStr=Math.round(wx.temperature_2m)+C.units.temp;
     }
-    return assemble(now, todayKey, win, upcoming, cur, water, windStr, pressStr, humStr, false);
+    return assemble(now, todayKey, win, upcoming, cur, water, airStr, windStr, pressStr, humStr, false);
   });
 }
 // 48h default window: 12h past + 36h future; render further future for scrolling (clamped to data).
@@ -117,7 +118,7 @@ function fmtClock(min){
   return h+":"+pad(m)+" "+ap;
 }
 
-function assemble(now, todayKey, win, events, cur, water, wind, press, hum, isMock){
+function assemble(now, todayKey, win, events, cur, water, air, wind, press, hum, isMock){
   var dObj=new Date(now.y, now.mo-1, now.d, now.h, now.m);
   var sun=window.SunCalc.getTimes(dObj, C.lat, C.lon);
   var ill=window.SunCalc.getMoonIllumination(dObj);
@@ -129,7 +130,7 @@ function assemble(now, todayKey, win, events, cur, water, wind, press, hum, isMo
     stationName:C.stationName, now:now, dateLabel:fmtDate(dObj), todayKey:todayKey,
     curve:win.curve, startOff:win.startOff, endOff:win.endOff, marks:(win.marks||[]), events:events,
     current:{height:cur.v, rising:cur.rising},
-    water:water, wind:wind, pressure:press, humidity:hum,
+    water:water, air:air, wind:wind, pressure:press, humidity:hum,
     sun:{rise:minClock(sun.sunrise), set:minClock(sun.sunset)},
     moon:{name:phaseName(ill.phase), illum:ill.fraction, phase:ill.phase, next:nextLbl},
     isMock:isMock
@@ -171,7 +172,7 @@ function buildMock(){
   var win=buildWindow(now, evs);
   var upcoming=evs.filter(function(e){return e.off>=now.min;}).slice(0,4);
   var cur=interp(win.curve, now.min);
-  return Promise.resolve(assemble(now, todayKey, win, upcoming, cur, "72"+C.units.temp, "SSE 8", "30.11 in", "65%", true));
+  return Promise.resolve(assemble(now, todayKey, win, upcoming, cur, "72"+C.units.temp, "68"+C.units.temp, "SSE 8", "30.11 in", "65%", true));
 }
 
 window.OceanData={

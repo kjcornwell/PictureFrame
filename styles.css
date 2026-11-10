@@ -33,7 +33,7 @@ body{
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 }
 #clock{font-size:34px; font-weight:800; color:var(--maroon); font-variant-numeric:tabular-nums; white-space:nowrap; flex:none}
-#conditions{display:flex; gap:26px; align-items:center; font-size:25px; font-weight:700; margin-bottom:12px}
+#conditions{display:flex; gap:20px; align-items:center; font-size:23px; font-weight:700; margin-bottom:12px; flex-wrap:wrap}
 .cond{display:flex; align-items:center; gap:9px}
 .ic{width:26px; height:26px; fill:none; stroke:var(--ink); stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:none}
 #asof{font-size:20px; color:var(--muted); margin-bottom:6px}
@@ -49,7 +49,7 @@ body{
 #status{display:inline-flex; gap:5px; align-items:flex-end; height:18px}
 #events{list-style:none; display:flex; flex-direction:column; gap:7px}
 #events li{display:flex; align-items:baseline; font-size:25px; font-weight:800; white-space:nowrap}
-#events .etri{color:var(--maroon); width:20px; flex:none}
+#events .etri{color:var(--maroon); width:18px; flex:none; margin-right:12px}
 #events .elbl{width:78px}
 #events .eht{width:92px}
 #events .etime{letter-spacing:-.01em}
@@ -65,9 +65,11 @@ body{
 #graph .axis{stroke:var(--line); stroke-width:2}
 #yaxis .axis{stroke:var(--line); stroke-width:2}
 #yaxis text{fill:var(--ink); font-size:19px; font-weight:700; font-family:inherit}
-#graph .daysep{stroke:var(--line); stroke-width:1.4}
+#graph .daysep{stroke:var(--line); stroke-width:2.2}
 #graph .grid{stroke:var(--grid); stroke-width:1.4}
-#graph .gridv{stroke:var(--grid); stroke-width:1.4; stroke-dasharray:3 6}
+#graph .gridv{stroke:var(--hair); stroke-width:1.5; stroke-dasharray:4 6}
+#graph .nowbubble{fill:var(--maroon)}
+#graph .nowbubtext{fill:var(--paper); font-size:19px; font-weight:800; font-family:inherit; font-variant-numeric:tabular-nums}
 #graph .curve{fill:none; stroke:var(--line); stroke-width:3.2}
 #graph .area{fill:var(--fill); stroke:none}
 #graph .past{stroke:var(--maroon); stroke-width:6; fill:none; stroke-linecap:round}

@@ -15,7 +15,7 @@ function fmt12(min){var h=Math.floor(min/60),mm=min%60,ap=h>=12?"PM":"AM";h=h%12
 function renderHeader(m){
   $("station").textContent=m.stationName;
   $("water").textContent=m.water; $("wind").textContent=m.wind; $("pressure").textContent=m.pressure;
-  $("humidity").textContent=m.humidity||"--";
+  $("airtemp").textContent=m.air||"--"; $("humidity").textContent=m.humidity||"--";
   $("asof").textContent="as of "+fmt12(m.now.min).toLowerCase();
   $("cur-dir").textContent=m.current.rising?"▲":"▼";
   $("cur-height").textContent=m.current.height.toFixed(1);
@@ -97,15 +97,10 @@ function renderGraph(m){
   function X(off){return (off-m.startOff)*pxPerMin;}
   g.setAttribute("viewBox","0 0 "+svgW.toFixed(0)+" "+H); g.style.width=svgW.toFixed(0)+"px";
   clear(g); var add=function(n){g.appendChild(n);};
-  // horizontal gridlines across full width
+  var bot=Y(yMin);
+  // horizontal gridlines (under the fill)
   for(var t=yMin;t<=yMax;t+=2){ var y=Y(t);
     add(svg("line",{class:t===0?"axis":"grid",x1:0,y1:y.toFixed(1),x2:svgW.toFixed(0),y2:y.toFixed(1)})); }
-  // vertical grid every 6h; heavier line + weekday at each midnight
-  for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
-    var mid=(((vmin%1440)+1440)%1440)===0;
-    add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:Y(yMin).toFixed(1)}));
-    add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, mid?dayAbbrev(m,Math.round(vmin/1440)):hourLbl(vmin)));
-  }
   // area + predicted curve
   var pts=m.curve.map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
   var base=Y(Math.max(0,yMin)).toFixed(1);
@@ -116,14 +111,24 @@ function renderGraph(m){
   var past=m.curve.filter(function(p){return p.off<=nowOff;}).map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
   past.push(X(nowOff).toFixed(1)+","+Y(curNow).toFixed(1));
   if(past.length>1)add(svg("path",{class:"past",d:"M"+past.join(" L")}));
+  // vertical 6h grid + day separators — drawn ON TOP of the fill, full plot height
+  for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
+    var mid=(((vmin%1440)+1440)%1440)===0;
+    add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:bot.toFixed(1)}));
+    add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, mid?dayAbbrev(m,Math.round(vmin/1440)):hourLbl(vmin)));
+  }
   // hi/lo markers across the window
   (m.marks||[]).forEach(function(e){ add(svg("path",{class:"evmark",d:triPath(X(e.off),Y(e.v)-16,e.type)})); });
   // sun/moon glyphs
   axisGlyphs(m).forEach(function(gl){ if(gl.off>=m.startOff&&gl.off<=m.endOff)
     add(svg("text",{class:"axlabel",x:X(gl.off).toFixed(1),y:(H-36),"text-anchor":"middle","font-size":"30"},gl.ic)); });
-  // now line + dot
-  add(svg("line",{class:"nowline",x1:X(nowOff).toFixed(1),y1:PADT,x2:X(nowOff).toFixed(1),y2:Y(yMin).toFixed(1)}));
-  add(svg("circle",{class:"nowdot",cx:X(nowOff).toFixed(1),cy:Y(curNow).toFixed(1),r:11}));
+  // now line + dot + current-time bubble at the top
+  var nx=X(nowOff);
+  add(svg("line",{class:"nowline",x1:nx.toFixed(1),y1:26,x2:nx.toFixed(1),y2:bot.toFixed(1)}));
+  add(svg("circle",{class:"nowdot",cx:nx.toFixed(1),cy:Y(curNow).toFixed(1),r:11}));
+  var lbl=nowTimeLabel(), bw=Math.max(70, lbl.length*12+24), bh=28;
+  add(svg("rect",{class:"nowbubble",x:(nx-bw/2).toFixed(1),y:1,width:bw.toFixed(0),height:bh,rx:14,ry:14}));
+  add(svg("text",{class:"nowbubtext",x:nx.toFixed(1),y:20,"text-anchor":"middle"},lbl));
   g.setAttribute("data-drawn","1");
   renderYAxis(m,H);
   scroll.scrollLeft = first ? 0 : prev;   // first render shows now-12h..now+36h; keep user scroll after
@@ -141,12 +146,13 @@ function axisGlyphs(m){
   }
   return out;
 }
-function startClock(){
-  function tick(){ try{
-    var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
+function nowTimeLabel(){
+  try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
       .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
-    $("clock").textContent=p.hour+":"+p.minute+" "+(p.dayPeriod||"");
-  }catch(e){} }
+    return p.hour+":"+p.minute+" "+(p.dayPeriod||""); }catch(e){ return ""; }
+}
+function startClock(){
+  function tick(){ var t=nowTimeLabel(); if(t) $("clock").textContent=t; }
   tick(); setInterval(tick,1000);
 }
 var lastModel=null;
