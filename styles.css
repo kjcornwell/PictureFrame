@@ -71,7 +71,6 @@ body{
 #graph .daysep{stroke:var(--line); stroke-width:1.3}
 #graph .tidebadge{fill:var(--paper); fill-opacity:0.82; stroke:var(--hair); stroke-width:1}
 #graph .tidebadgetext{fill:var(--muted); font-size:15px; font-weight:700; font-family:inherit; font-variant-numeric:tabular-nums}
-#graph .suntime{fill:var(--muted); font-size:14px; font-weight:700; font-family:inherit; font-variant-numeric:tabular-nums}
 #graph .grid{stroke:var(--grid); stroke-width:1.4}
 #graph .gridv{stroke:var(--hair); stroke-width:1.5; stroke-dasharray:4 6}
 #graph .nowbubble{fill:var(--maroon)}
@@ -84,7 +83,6 @@ body{
 #graph text{fill:var(--muted); font-size:19px; font-weight:700; font-family:inherit}
 #graph .daydate{font-size:17px; font-variant-numeric:tabular-nums}
 #graph .evmark{fill:var(--maroon)}
-#graph .axlabel{fill:var(--ink)}
 
 /* ---------- FOOTER ---------- */
 #foot{

@@ -62,7 +62,7 @@ function triPath(x,y,type){var d=7;return type==="H"
   ?"M"+(x-d)+","+(y+d)+" L"+(x+d)+","+(y+d)+" L"+x+","+(y-d)+" Z"
   :"M"+(x-d)+","+(y-d)+" L"+(x+d)+","+(y-d)+" L"+x+","+(y+d)+" Z";}
 
-var PADT=30, PADB=46;  // graph top/bottom padding (px)
+var PADT=30, PADB=34;  // graph top/bottom padding (px)
 // Fit the y-axis to the predicted range (like NOAA's chart) on a "nice" tick step, so heights can be read off.
 function yRange(m,H){
   var vs=m.curve.map(function(p){return p.v;}).concat((m.marks||[]).map(function(e){return e.v;}));
@@ -83,8 +83,6 @@ function dayLabel(m,dayOff){var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"
   var d=new Date(m.now.y,m.now.mo-1,m.now.d+dayOff);
   function p2(n){return (n<10?"0":"")+n;}
   return {day:names[d.getDay()], date:p2(d.getMonth()+1)+"/"+p2(d.getDate())};}
-function hourLbl(off){var mod=(((off%1440)+1440)%1440),h=Math.floor(mod/60);
-  return h===0?"":(h<12?(h+"a"):h===12?"12p":((h-12)+"p"));}
 
 function renderYAxis(m,H){
   var ya=$("yaxis"); clear(ya); var yr=yRange(m,H), Y=yFn(yr,H);
@@ -119,8 +117,7 @@ function renderGraph(m){
   var past=m.curve.filter(function(p){return p.off<=nowOff;}).map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
   past.push(X(nowOff).toFixed(1)+","+Y(curNow).toFixed(1));
   if(past.length>1)add(svg("path",{class:"past",d:"M"+past.join(" L")}));
-  // vertical 6h grid + day separators (on top of fill, full height). Only noon/midnight get axis
-  // text, leaving room for the sunrise/sunset time labels that sit near 6a/6p.
+  // vertical 6h grid + day separators (on top of fill, full height); noon/midnight get axis text
   for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
     var mod=(((vmin%1440)+1440)%1440), mid=mod===0;
     add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:bot.toFixed(1)}));
@@ -142,12 +139,6 @@ function renderGraph(m){
     add(svg("rect",{class:"tidebadge",x:(cbx-bw/2).toFixed(1),y:(by-11).toFixed(1),width:bw.toFixed(0),height:22,rx:11,ry:11}));
     add(svg("text",{class:"tidebadgetext",x:cbx.toFixed(1),y:(by+5).toFixed(1),"text-anchor":"middle"},tc));
   });
-  // sun/moon glyphs (sunrise/sunset get a time label)
-  axisGlyphs(m).forEach(function(gl){ if(gl.off>=m.startOff&&gl.off<=m.endOff){
-    var gx=X(gl.off);
-    add(svg("text",{class:"axlabel",x:gx.toFixed(1),y:(H-34),"text-anchor":"middle","font-size":"26"},gl.ic));
-    if(gl.t) add(svg("text",{class:"suntime",x:gx.toFixed(1),y:(H-13),"text-anchor":"middle"},gl.t));
-  }});
   // now line + dot + current-time bubble at the top
   var nx=X(nowOff);
   add(svg("line",{class:"nowline",x1:nx.toFixed(1),y1:26,x2:nx.toFixed(1),y2:bot.toFixed(1)}));
@@ -163,19 +154,6 @@ function renderGraph(m){
   scroll.scrollLeft = wasHome ? home : prev+((chartStart===null?m.startOff:chartStart)-m.startOff)*pxPerMin;
   chartHome=home; chartStart=m.startOff; if(syncChartReset) syncChartReset();
 }
-function axisGlyphs(m){
-  var out=[], dStart=Math.floor(m.startOff/1440), dEnd=Math.ceil(m.endOff/1440);
-  function tzmin(d){return window.__tzMins?window.__tzMins(d):(d.getHours()*60+d.getMinutes());}
-  for(var dd=dStart; dd<=dEnd; dd++){
-    var dObj=new Date(m.now.y,m.now.mo-1,m.now.d+dd);
-    var sun=window.SunCalc.getTimes(dObj,C.lat,C.lon), mt=window.SunCalc.getMoonTimes(dObj,C.lat,C.lon);
-    if(sun.sunrise)out.push({off:dd*1440+tzmin(sun.sunrise),ic:"☀",t:compactClock(sun.sunrise)});
-    if(sun.sunset)out.push({off:dd*1440+tzmin(sun.sunset),ic:"☀",t:compactClock(sun.sunset)});
-    if(mt.rise)out.push({off:dd*1440+tzmin(mt.rise),ic:"☽"});
-    if(mt.set)out.push({off:dd*1440+tzmin(mt.set),ic:"☽"});
-  }
-  return out;
-}
 function nowTimeLabel(){
   try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
       .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
@@ -185,11 +163,6 @@ function clockLabel(){
   try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true})
       .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
     return p.hour+":"+p.minute+":"+p.second+" "+(p.dayPeriod||""); }catch(e){ return ""; }
-}
-function compactClock(d){
-  try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
-      .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
-    return p.hour+":"+p.minute+((p.dayPeriod||"").toLowerCase()==="am"?"a":"p"); }catch(e){ return ""; }
 }
 // Clock ticks on the second boundary; the instant the minute rolls over, the chart's now-line,
 // time bubble and current height are re-ticked so they never lag the clock.
