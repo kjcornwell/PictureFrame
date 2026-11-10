@@ -126,13 +126,15 @@ function assemble(now, todayKey, win, events, cur, water, air, wind, press, hum,
   var dObj=new Date(now.y, now.mo-1, now.d, now.h, now.m);
   var sun=window.SunCalc.getTimes(dObj, C.lat, C.lon);
   var ill=window.SunCalc.getMoonIllumination(new Date());   // true instant, independent of device timezone
+  var mt=window.SunCalc.getMoonTimes(new Date(now.y, now.mo-1, now.d), C.lat, C.lon);   // today's moonrise/moonset
   return {
     stationName:C.stationName, now:now, dateLabel:fmtDate(dObj), todayKey:todayKey,
     curve:win.curve, startOff:win.startOff, endOff:win.endOff, marks:(win.marks||[]), events:events,
     current:{height:cur.v, rising:cur.rising},
     water:water, air:air, wind:wind, pressure:press, humidity:hum,
     sun:{rise:minClock(sun.sunrise), set:minClock(sun.sunset)},
-    moon:{name:phaseName(ill.phase), illum:ill.fraction, phase:ill.phase},
+    moon:{name:phaseName(ill.phase), illum:ill.fraction, phase:ill.phase,
+      rise:mt.rise?minClock(mt.rise):"--", set:mt.set?minClock(mt.set):"--"},
     isMock:isMock
   };
 }
