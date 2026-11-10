@@ -221,10 +221,18 @@ function refresh(){
 var chartHome=0, chartStart=null, syncChartReset=null;
 function initChartReset(){
   var scroll=$("graph-scroll"), btn=$("chart-reset"); if(!scroll||!btn) return;
-  function sync(){ btn.hidden = Math.abs(scroll.scrollLeft-chartHome) < 12; }
+  var idleMs=Math.max(5,parseInt(C.chartIdleResetSeconds,10)||60)*1000, idleTimer=null;
+  function isAway(){ return Math.abs(scroll.scrollLeft-chartHome) >= 12; }
+  function sync(){ btn.hidden=!isAway(); }          // button shows while away from the live view
+  function goHome(){ scroll.scrollLeft=chartHome; sync(); }
+  // Idle countdown restarts only on real scrolling (not on the per-minute re-render), then returns to live.
+  function arm(){
+    if(idleTimer){ clearTimeout(idleTimer); idleTimer=null; }
+    if(isAway()) idleTimer=setTimeout(function(){ idleTimer=null; goHome(); }, idleMs);
+  }
   syncChartReset=sync;
-  scroll.addEventListener("scroll", sync);
-  btn.addEventListener("click", function(){ scroll.scrollLeft=chartHome; sync(); });
+  scroll.addEventListener("scroll", function(){ sync(); arm(); });
+  btn.addEventListener("click", function(){ goHome(); arm(); });
   sync();
 }
 startClock(); initChartReset();

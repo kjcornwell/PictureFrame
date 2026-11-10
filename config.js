@@ -17,6 +17,8 @@ window.CONFIG = {
   chartDays: 30,
   // How many days of past tides the chart can be scrolled back through.
   pastDays: 3,
+  // Seconds after the last drag before the chart returns to the live view on its own.
+  chartIdleResetSeconds: 60,
   // When true, render from built-in sample data (no network) so the layout shows offline.
   useMock: false
 };
