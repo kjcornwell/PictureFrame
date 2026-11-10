@@ -34,7 +34,7 @@ function renderHeader(m){
     var li=el("li");
     li.appendChild(el("span",{class:"etri"},e.type==="H"?"▲":"▼"));
     li.appendChild(el("span",{class:"elbl"},e.type==="H"?"High":"Low"));
-    li.appendChild(el("span",{class:"eht"},e.v.toFixed(1)+C.units.tide));
+    li.appendChild(el("span",{class:"eht"},((Math.round(e.v*10)/10)||0).toFixed(1)+C.units.tide));
     li.appendChild(el("span",{class:"etime"},e.time));
     if(e.tmrw)li.appendChild(el("span",{class:"etmrw"},"tmrw"));
     ul.appendChild(li);
@@ -66,13 +66,21 @@ function triPath(x,y,type){var d=7;return type==="H"
   :"M"+(x-d)+","+(y-d)+" L"+(x+d)+","+(y-d)+" L"+x+","+(y+d)+" Z";}
 
 var PADT=30, PADB=46;  // graph top/bottom padding (px)
-function yRange(m){
+// Fit the y-axis to the predicted range (like NOAA's chart) on a "nice" tick step, so heights can be read off.
+function yRange(m,H){
   var vs=m.curve.map(function(p){return p.v;}).concat((m.marks||[]).map(function(e){return e.v;}));
-  var maxV=Math.max.apply(null,vs), minV=Math.min.apply(null,vs);
-  var yMax=Math.ceil((maxV+0.4)/2)*2; if(yMax<2)yMax=2;
-  var yMin=(minV<-0.1)?Math.floor((minV-0.1)*2)/2:0;   // half-foot floor keeps small negative lows from flattening the curve
-  return {yMax:yMax,yMin:yMin};
+  var maxV=Math.max.apply(null,vs), minV=Math.min(0,Math.min.apply(null,vs));
+  var steps=[0.25,0.5,1,2,5,10], step=steps[steps.length-1];
+  for(var i=0;i<steps.length;i++){ if((maxV-minV)/steps[i]<=6){step=steps[i];break;} }
+  var yMin=Math.floor(minV/step+1e-9)*step, yMax=Math.ceil(maxV/step-1e-9)*step;
+  if(yMax<=yMin) yMax=yMin+step;
+  // headroom so the high-tide marker + badge clear the top of the plot
+  var plotH=Math.max(1,(H||420)-PADT-PADB);
+  while((yMax-maxV)/(yMax-yMin)*plotH<58) yMax+=step;
+  return {yMax:yMax,yMin:yMin,step:step,n:Math.round((yMax-yMin)/step)};
 }
+function tickLabel(t){ var r=Math.round(t*100)/100; return ""+(r===0?0:r); }
+function fmtFt(v){ var r=Math.round(v*100)/100; return (r===0?0:r).toFixed(2); }
 function yFn(yr,H){return function(v){return PADT+(yr.yMax-v)/(yr.yMax-yr.yMin)*(H-PADT-PADB);};}
 function dayLabel(m,dayOff){var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   var d=new Date(m.now.y,m.now.mo-1,m.now.d+dayOff);
@@ -81,18 +89,19 @@ function hourLbl(off){var mod=(((off%1440)+1440)%1440),h=Math.floor(mod/60);
   return h===0?"":(h<12?(h+"a"):h===12?"12p":((h-12)+"p"));}
 
 function renderYAxis(m,H){
-  var ya=$("yaxis"); clear(ya); var yr=yRange(m), Y=yFn(yr,H);
+  var ya=$("yaxis"); clear(ya); var yr=yRange(m,H), Y=yFn(yr,H);
   ya.setAttribute("viewBox","0 0 52 "+H);
-  for(var t=Math.ceil(yr.yMin/2)*2;t<=yr.yMax;t+=2){
-    ya.appendChild(svg("text",{x:46,y:(Y(t)+7).toFixed(1),"text-anchor":"end"}, t===yr.yMax?(t+" ft"):(""+t)));
+  for(var i=0;i<=yr.n;i++){ var t=yr.yMin+i*yr.step;
+    ya.appendChild(svg("text",{class:"ytick",x:46,y:(Y(t)+6).toFixed(1),"text-anchor":"end"}, tickLabel(t)));
   }
+  ya.appendChild(svg("text",{class:"yunit",x:46,y:PADT-12,"text-anchor":"end"}, C.units.tide));
   ya.appendChild(svg("line",{class:"axis",x1:51,y1:PADT,x2:51,y2:Y(yr.yMin).toFixed(1)}));
 }
 function renderGraph(m){
   var scroll=$("graph-scroll"), g=$("graph");
   var first=!g.getAttribute("data-drawn"), prev=scroll.scrollLeft;
   var vw=scroll.clientWidth||1176, H=scroll.clientHeight||420, VIEW=48*60;
-  var yr=yRange(m), Y=yFn(yr,H), yMin=yr.yMin, yMax=yr.yMax;
+  var yr=yRange(m,H), Y=yFn(yr,H), yMin=yr.yMin, yMax=yr.yMax;
   var pxPerMin=vw/VIEW, totalMin=m.endOff-m.startOff;
   var svgW=Math.max(vw, totalMin*pxPerMin);
   function X(off){return (off-m.startOff)*pxPerMin;}
@@ -100,8 +109,8 @@ function renderGraph(m){
   clear(g); var add=function(n){g.appendChild(n);};
   var bot=Y(yMin);
   // horizontal gridlines (under the fill)
-  for(var t=Math.ceil(yMin/2)*2;t<=yMax;t+=2){ var y=Y(t);
-    add(svg("line",{class:t===0?"axis":"grid",x1:0,y1:y.toFixed(1),x2:svgW.toFixed(0),y2:y.toFixed(1)})); }
+  for(var gi=0;gi<=yr.n;gi++){ var t=yMin+gi*yr.step, y=Y(t);
+    add(svg("line",{class:Math.abs(t)<1e-9?"axis":"grid",x1:0,y1:y.toFixed(1),x2:svgW.toFixed(0),y2:y.toFixed(1)})); }
   // area + predicted curve
   var pts=m.curve.map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
   var base=Y(Math.max(0,yMin)).toFixed(1);
@@ -122,14 +131,16 @@ function renderGraph(m){
       tx.appendChild(svg("tspan",{class:"daydate",dx:3,dy:5}, dl.date)); add(tx);
     } else if(mod===720){ add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, "12p")); }
   }
-  // hi/lo markers + subtle time badges
+  // hi/lo markers + subtle time/height badges
   (m.marks||[]).forEach(function(e){
     var mx=X(e.off), my=Y(e.v);
     add(svg("path",{class:"evmark",d:triPath(mx,my-16,e.type)}));
     if(Math.abs(e.off-nowOff) < 24) return;   // skip right at "now" (the time bubble covers it)
-    var tc=e.time.replace(/ ?AM/i,"a").replace(/ ?PM/i,"p");
+    var tc=e.time.replace(/ ?AM/i,"a").replace(/ ?PM/i,"p")+" · "+fmtFt(e.v)+" "+C.units.tide;
     var by=(e.type==="H"||my+30>bot-14)?Math.max(my-42,44):my+30;
-    var bw=tc.length*8.5+14, cbx=Math.max(bw/2+2, Math.min(mx, svgW-bw/2-2));  // keep badge in view
+    var bw=tc.length*7.8+16, nowX=X(nowOff), cbx=mx;
+    if(Math.abs(cbx-nowX)<bw/2+12) cbx=nowX+(mx<nowX?-1:1)*(bw/2+12);   // slide clear of the now line
+    cbx=Math.max(bw/2+2, Math.min(cbx, svgW-bw/2-2));  // keep badge in view
     add(svg("rect",{class:"tidebadge",x:(cbx-bw/2).toFixed(1),y:(by-11).toFixed(1),width:bw.toFixed(0),height:22,rx:11,ry:11}));
     add(svg("text",{class:"tidebadgetext",x:cbx.toFixed(1),y:(by+5).toFixed(1),"text-anchor":"middle"},tc));
   });

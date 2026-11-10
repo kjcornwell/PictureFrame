@@ -64,7 +64,8 @@ body{
 #graph{height:100%; display:block}
 #graph .axis{stroke:var(--line); stroke-width:2}
 #yaxis .axis{stroke:var(--line); stroke-width:2}
-#yaxis text{fill:var(--ink); font-size:19px; font-weight:700; font-family:inherit}
+#yaxis text{fill:var(--ink); font-size:16px; font-weight:700; font-family:inherit; font-variant-numeric:tabular-nums}
+#yaxis .yunit{fill:var(--muted); font-size:13px}
 #graph .daysep{stroke:var(--line); stroke-width:1.3}
 #graph .tidebadge{fill:var(--paper); fill-opacity:0.82; stroke:var(--hair); stroke-width:1}
 #graph .tidebadgetext{fill:var(--muted); font-size:15px; font-weight:700; font-family:inherit; font-variant-numeric:tabular-nums}

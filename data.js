@@ -52,6 +52,9 @@ function curveFromHilo(events, startOff, endOff){
     else { var f=(off-a.m)/(b.m-a.m); v=a.v+(b.v-a.v)*(1-Math.cos(f*Math.PI))/2; }
     out.push({off:off, v:v});
   }
+  // include the exact high/low points so peaks and troughs land on NOAA's predicted time and height
+  pts.forEach(function(p){ if(p.m>startOff && p.m<endOff) out.push({off:p.m, v:p.v}); });
+  out.sort(function(a,b){return a.off-b.off;});
   return out;
 }
 function buildLive(){
