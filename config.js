@@ -15,6 +15,8 @@ window.CONFIG = {
   refreshMinutes: 30,
   // How many days of future tide predictions the chart can be scrolled through.
   chartDays: 30,
+  // How many days of past tides the chart can be scrolled back through.
+  pastDays: 3,
   // When true, render from built-in sample data (no network) so the layout shows offline.
   useMock: false
 };

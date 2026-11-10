@@ -102,7 +102,7 @@ function renderYAxis(m,H){
 }
 function renderGraph(m){
   var scroll=$("graph-scroll"), g=$("graph");
-  var first=!g.getAttribute("data-drawn"), prev=scroll.scrollLeft;
+  var first=!g.getAttribute("data-drawn"), prev=scroll.scrollLeft, wasHome=first||Math.abs(prev-chartHome)<12;
   var vw=scroll.clientWidth||1176, H=scroll.clientHeight||420, VIEW=48*60;
   var yr=yRange(m,H), Y=yFn(yr,H), yMin=yr.yMin, yMax=yr.yMax;
   var pxPerMin=vw/VIEW, totalMin=m.endOff-m.startOff;
@@ -162,7 +162,11 @@ function renderGraph(m){
   add(svg("text",{class:"nowbubtext",x:nx.toFixed(1),y:20,"text-anchor":"middle"},lbl));
   g.setAttribute("data-drawn","1");
   renderYAxis(m,H);
-  scroll.scrollLeft = first ? 0 : prev;   // first render shows now-12h..now+36h; keep user scroll after
+  // "home" = the view that opens at now-12h. Stay there if the user hasn't dragged away;
+  // otherwise keep them on the same moment in time even if the window start moved.
+  var home=Math.max(0, Math.min((nowOff-720-m.startOff)*pxPerMin, svgW-vw));
+  scroll.scrollLeft = wasHome ? home : prev+((chartStart===null?m.startOff:chartStart)-m.startOff)*pxPerMin;
+  chartHome=home; chartStart=m.startOff; if(syncChartReset) syncChartReset();
 }
 function axisGlyphs(m){
   var out=[], dStart=Math.floor(m.startOff/1440), dEnd=Math.ceil(m.endOff/1440);
@@ -214,11 +218,13 @@ function refresh(){
    .catch(function(e){console.log("[OceanTide]",e);var c=cacheLoad();if(c)render(c);});
 }
 // "Reset" button: appears once the chart is dragged away from now, jumps back on tap.
+var chartHome=0, chartStart=null, syncChartReset=null;
 function initChartReset(){
   var scroll=$("graph-scroll"), btn=$("chart-reset"); if(!scroll||!btn) return;
-  function sync(){ btn.hidden = scroll.scrollLeft < 12; }
+  function sync(){ btn.hidden = Math.abs(scroll.scrollLeft-chartHome) < 12; }
+  syncChartReset=sync;
   scroll.addEventListener("scroll", sync);
-  btn.addEventListener("click", function(){ scroll.scrollLeft=0; sync(); });
+  btn.addEventListener("click", function(){ scroll.scrollLeft=chartHome; sync(); });
   sync();
 }
 startClock(); initChartReset();
