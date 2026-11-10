@@ -125,7 +125,7 @@ function renderGraph(m){
     add(svg("path",{class:"evmark",d:triPath(mx,my-16,e.type)}));
     if(Math.abs(e.off-nowOff) < 24) return;   // skip right at "now" (the time bubble covers it)
     var tc=e.time.replace(/ ?AM/i,"a").replace(/ ?PM/i,"p");
-    var by=(e.type==="H")?Math.max(my-42,44):Math.min(my+30,bot-14);
+    var by=(e.type==="H"||my+30>bot-14)?Math.max(my-42,44):my+30;
     var bw=tc.length*8.5+14, cbx=Math.max(bw/2+2, Math.min(mx, svgW-bw/2-2));  // keep badge in view
     add(svg("rect",{class:"tidebadge",x:(cbx-bw/2).toFixed(1),y:(by-11).toFixed(1),width:bw.toFixed(0),height:22,rx:11,ry:11}));
     add(svg("text",{class:"tidebadgetext",x:cbx.toFixed(1),y:(by+5).toFixed(1),"text-anchor":"middle"},tc));
