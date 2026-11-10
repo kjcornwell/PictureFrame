@@ -70,19 +70,20 @@ function yRange(m){
   var vs=m.curve.map(function(p){return p.v;}).concat((m.marks||[]).map(function(e){return e.v;}));
   var maxV=Math.max.apply(null,vs), minV=Math.min.apply(null,vs);
   var yMax=Math.ceil((maxV+0.4)/2)*2; if(yMax<2)yMax=2;
-  var yMin=(minV<-0.1)?Math.floor((minV-0.2)/2)*2:0;
+  var yMin=(minV<-0.1)?Math.floor((minV-0.1)*2)/2:0;   // half-foot floor keeps small negative lows from flattening the curve
   return {yMax:yMax,yMin:yMin};
 }
 function yFn(yr,H){return function(v){return PADT+(yr.yMax-v)/(yr.yMax-yr.yMin)*(H-PADT-PADB);};}
-function dayAbbrev(m,dayOff){var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  return names[new Date(m.now.y,m.now.mo-1,m.now.d+dayOff).getDay()];}
+function dayLabel(m,dayOff){var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var d=new Date(m.now.y,m.now.mo-1,m.now.d+dayOff);
+  return {day:names[d.getDay()], date:(d.getMonth()+1)+"/"+d.getDate()};}
 function hourLbl(off){var mod=(((off%1440)+1440)%1440),h=Math.floor(mod/60);
   return h===0?"":(h<12?(h+"a"):h===12?"12p":((h-12)+"p"));}
 
 function renderYAxis(m,H){
   var ya=$("yaxis"); clear(ya); var yr=yRange(m), Y=yFn(yr,H);
   ya.setAttribute("viewBox","0 0 52 "+H);
-  for(var t=yr.yMin;t<=yr.yMax;t+=2){
+  for(var t=Math.ceil(yr.yMin/2)*2;t<=yr.yMax;t+=2){
     ya.appendChild(svg("text",{x:46,y:(Y(t)+7).toFixed(1),"text-anchor":"end"}, t===yr.yMax?(t+" ft"):(""+t)));
   }
   ya.appendChild(svg("line",{class:"axis",x1:51,y1:PADT,x2:51,y2:Y(yr.yMin).toFixed(1)}));
@@ -99,7 +100,7 @@ function renderGraph(m){
   clear(g); var add=function(n){g.appendChild(n);};
   var bot=Y(yMin);
   // horizontal gridlines (under the fill)
-  for(var t=yMin;t<=yMax;t+=2){ var y=Y(t);
+  for(var t=Math.ceil(yMin/2)*2;t<=yMax;t+=2){ var y=Y(t);
     add(svg("line",{class:t===0?"axis":"grid",x1:0,y1:y.toFixed(1),x2:svgW.toFixed(0),y2:y.toFixed(1)})); }
   // area + predicted curve
   var pts=m.curve.map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
@@ -116,8 +117,10 @@ function renderGraph(m){
   for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
     var mod=(((vmin%1440)+1440)%1440), mid=mod===0;
     add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:bot.toFixed(1)}));
-    var lbl = mid ? dayAbbrev(m,Math.round(vmin/1440)) : (mod===720?"12p":"");
-    if(lbl) add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, lbl));
+    if(mid){ var dl=dayLabel(m,Math.round(vmin/1440));   // weekday + subscript date
+      var tx=svg("text",{x:X(vmin).toFixed(1),y:(H-14),"text-anchor":"middle"}, dl.day);
+      tx.appendChild(svg("tspan",{class:"daydate",dx:3,dy:5}, dl.date)); add(tx);
+    } else if(mod===720){ add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, "12p")); }
   }
   // hi/lo markers + subtle time badges
   (m.marks||[]).forEach(function(e){

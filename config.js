@@ -13,6 +13,8 @@ window.CONFIG = {
   // Day/night auto-dim schedule (local hours, 24h). Night = dark theme.
   nightStart: 21, nightEnd: 6,
   refreshMinutes: 30,
+  // How many days of future tide predictions the chart can be scrolled through.
+  chartDays: 30,
   // When true, render from built-in sample data (no network) so the layout shows offline.
   useMock: false
 };

@@ -57,11 +57,12 @@ function curveFromHilo(events, startOff, endOff){
 function buildLive(){
   var now=nowInTz();
   var todayKey=now.y+"-"+pad(now.mo)+"-"+pad(now.d);
-  // start yesterday so the curve is anchored before 00:00; 4-day range covers today+tomorrow events
-  var y=new Date(Date.UTC(now.y,now.mo-1,now.d)); y.setUTCDate(y.getUTCDate()-1);
-  var begin=""+y.getUTCFullYear()+pad(y.getUTCMonth()+1)+pad(y.getUTCDate());
+  // start yesterday so the curve is anchored before 00:00; end one day past the scrollable window
+  function utcKey(dd){var d=new Date(Date.UTC(now.y,now.mo-1,now.d+dd));
+    return ""+d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate());}
+  var begin=utcKey(-1), end=utcKey(chartDays()+1);
   var hiloU=NOAA+"?application=oceantide-frame&product=predictions&datum="+C.datum+
-    "&station="+C.tideStation+"&time_zone=lst_ldt&units=english&format=json&interval=hilo&begin_date="+begin+"&range=96";
+    "&station="+C.tideStation+"&time_zone=lst_ldt&units=english&format=json&interval=hilo&begin_date="+begin+"&end_date="+end;
   var waterU=noaaUrl("water_temperature",C.waterTempStation,"&date=latest");
   var wxU="https://api.open-meteo.com/v1/forecast?latitude="+C.lat+"&longitude="+C.lon+
     "&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,surface_pressure"+
@@ -94,13 +95,13 @@ function buildLive(){
     return assemble(now, todayKey, win, upcoming, cur, water, airStr, windStr, pressStr, humStr, false);
   });
 }
-// 48h default window: 12h past + 36h future; render further future for scrolling (clamped to data).
+function chartDays(){var d=parseInt(C.chartDays,10);return (isFinite(d)&&d>=2)?Math.min(d,90):30;}
+// 48h visible window: 12h past + 36h future; the rest of chartDays is reachable by scrolling (clamped to data).
 function buildWindow(now, evs){
   var offs=evs.map(function(e){return e.off;});
   var minE=Math.min.apply(null,offs), maxE=Math.max.apply(null,offs);
   var startOff=Math.max(minE, now.min-720);         // 12h before now
-  var endOff=Math.min(maxE, now.min+72*60);          // up to 3 days future (scrollable)
-  if(endOff < now.min+48*60) endOff=Math.min(maxE, now.min+48*60);
+  var endOff=Math.min(maxE, now.min+chartDays()*1440);
   var marks=evs.filter(function(e){return e.off>=startOff && e.off<=endOff;});
   return {curve:curveFromHilo(evs,startOff,endOff), startOff:startOff, endOff:endOff, marks:marks};
 }
@@ -164,7 +165,7 @@ function buildMock(){
   var now=nowInTz();
   var todayKey=now.y+"-"+pad(now.mo)+"-"+pad(now.d);
   var evs=[], hi=true, start=now.min-1500; start=start-(((start%372)+372)%372);
-  for(var off=start; off<=now.min+72*60+372; off+=372){
+  for(var off=start; off<=now.min+chartDays()*1440+372; off+=372){
     var mod=(((off%1440)+1440)%1440);
     evs.push({type:hi?"H":"L", v:hi?4.6:0.3, off:off, dateKey:todayKey, tmrw:off>=1440, time:fmtClock(mod)});
     hi=!hi;

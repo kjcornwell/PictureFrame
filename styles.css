@@ -55,7 +55,7 @@ body{
 #events .etime{letter-spacing:-.01em}
 #events .etmrw{font-size:16px; font-weight:700; color:var(--muted); font-style:italic; margin-left:8px}
 
-/* ---------- GRAPH (scrollable 48h window + pinned y-axis) ---------- */
+/* ---------- GRAPH (48h visible, scrollable through config.chartDays + pinned y-axis) ---------- */
 #graph-wrap{flex:1 1 auto; margin-top:12px; border-top:2px solid var(--line); min-height:0; display:flex}
 #yaxis{width:52px; height:100%; flex:none; display:block}
 #graph-scroll{flex:1 1 auto; height:100%; min-width:0; overflow-x:auto; overflow-y:hidden;
@@ -79,6 +79,7 @@ body{
 #graph .nowline{stroke:var(--maroon); stroke-width:3}
 #graph .nowdot{fill:var(--paper); stroke:var(--maroon); stroke-width:4}
 #graph text{fill:var(--muted); font-size:19px; font-weight:700; font-family:inherit}
+#graph .daydate{font-size:12px; font-variant-numeric:tabular-nums}
 #graph .evmark{fill:var(--maroon)}
 #graph .axlabel{fill:var(--ink)}
 
