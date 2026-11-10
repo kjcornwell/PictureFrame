@@ -111,17 +111,31 @@ function renderGraph(m){
   var past=m.curve.filter(function(p){return p.off<=nowOff;}).map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
   past.push(X(nowOff).toFixed(1)+","+Y(curNow).toFixed(1));
   if(past.length>1)add(svg("path",{class:"past",d:"M"+past.join(" L")}));
-  // vertical 6h grid + day separators — drawn ON TOP of the fill, full plot height
+  // vertical 6h grid + day separators (on top of fill, full height). Only noon/midnight get axis
+  // text, leaving room for the sunrise/sunset time labels that sit near 6a/6p.
   for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
-    var mid=(((vmin%1440)+1440)%1440)===0;
+    var mod=(((vmin%1440)+1440)%1440), mid=mod===0;
     add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:bot.toFixed(1)}));
-    add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, mid?dayAbbrev(m,Math.round(vmin/1440)):hourLbl(vmin)));
+    var lbl = mid ? dayAbbrev(m,Math.round(vmin/1440)) : (mod===720?"12p":"");
+    if(lbl) add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, lbl));
   }
-  // hi/lo markers across the window
-  (m.marks||[]).forEach(function(e){ add(svg("path",{class:"evmark",d:triPath(X(e.off),Y(e.v)-16,e.type)})); });
-  // sun/moon glyphs
-  axisGlyphs(m).forEach(function(gl){ if(gl.off>=m.startOff&&gl.off<=m.endOff)
-    add(svg("text",{class:"axlabel",x:X(gl.off).toFixed(1),y:(H-36),"text-anchor":"middle","font-size":"30"},gl.ic)); });
+  // hi/lo markers + subtle time badges
+  (m.marks||[]).forEach(function(e){
+    var mx=X(e.off), my=Y(e.v);
+    add(svg("path",{class:"evmark",d:triPath(mx,my-16,e.type)}));
+    if(Math.abs(e.off-nowOff) < 24) return;   // skip right at "now" (the time bubble covers it)
+    var tc=e.time.replace(/ ?AM/i,"a").replace(/ ?PM/i,"p");
+    var by=(e.type==="H")?Math.max(my-42,44):Math.min(my+30,bot-14);
+    var bw=tc.length*8.5+14, cbx=Math.max(bw/2+2, Math.min(mx, svgW-bw/2-2));  // keep badge in view
+    add(svg("rect",{class:"tidebadge",x:(cbx-bw/2).toFixed(1),y:(by-11).toFixed(1),width:bw.toFixed(0),height:22,rx:11,ry:11}));
+    add(svg("text",{class:"tidebadgetext",x:cbx.toFixed(1),y:(by+5).toFixed(1),"text-anchor":"middle"},tc));
+  });
+  // sun/moon glyphs (sunrise/sunset get a time label)
+  axisGlyphs(m).forEach(function(gl){ if(gl.off>=m.startOff&&gl.off<=m.endOff){
+    var gx=X(gl.off);
+    add(svg("text",{class:"axlabel",x:gx.toFixed(1),y:(H-34),"text-anchor":"middle","font-size":"26"},gl.ic));
+    if(gl.t) add(svg("text",{class:"suntime",x:gx.toFixed(1),y:(H-13),"text-anchor":"middle"},gl.t));
+  }});
   // now line + dot + current-time bubble at the top
   var nx=X(nowOff);
   add(svg("line",{class:"nowline",x1:nx.toFixed(1),y1:26,x2:nx.toFixed(1),y2:bot.toFixed(1)}));
@@ -139,8 +153,8 @@ function axisGlyphs(m){
   for(var dd=dStart; dd<=dEnd; dd++){
     var dObj=new Date(m.now.y,m.now.mo-1,m.now.d+dd);
     var sun=window.SunCalc.getTimes(dObj,C.lat,C.lon), mt=window.SunCalc.getMoonTimes(dObj,C.lat,C.lon);
-    if(sun.sunrise)out.push({off:dd*1440+tzmin(sun.sunrise),ic:"☀"});
-    if(sun.sunset)out.push({off:dd*1440+tzmin(sun.sunset),ic:"☀"});
+    if(sun.sunrise)out.push({off:dd*1440+tzmin(sun.sunrise),ic:"☀",t:compactClock(sun.sunrise)});
+    if(sun.sunset)out.push({off:dd*1440+tzmin(sun.sunset),ic:"☀",t:compactClock(sun.sunset)});
     if(mt.rise)out.push({off:dd*1440+tzmin(mt.rise),ic:"☽"});
     if(mt.set)out.push({off:dd*1440+tzmin(mt.set),ic:"☽"});
   }
@@ -151,8 +165,18 @@ function nowTimeLabel(){
       .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
     return p.hour+":"+p.minute+" "+(p.dayPeriod||""); }catch(e){ return ""; }
 }
+function clockLabel(){
+  try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",second:"2-digit",hour12:true})
+      .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+    return p.hour+":"+p.minute+":"+p.second+" "+(p.dayPeriod||""); }catch(e){ return ""; }
+}
+function compactClock(d){
+  try{ var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
+      .formatToParts(d).forEach(function(x){p[x.type]=x.value;});
+    return p.hour+":"+p.minute+((p.dayPeriod||"").toLowerCase()==="am"?"a":"p"); }catch(e){ return ""; }
+}
 function startClock(){
-  function tick(){ var t=nowTimeLabel(); if(t) $("clock").textContent=t; }
+  function tick(){ var t=clockLabel(); if(t) $("clock").textContent=t; }
   tick(); setInterval(tick,1000);
 }
 var lastModel=null;
