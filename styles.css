@@ -80,7 +80,7 @@ body{
 #graph .nowline{stroke:var(--maroon); stroke-width:3}
 #graph .nowdot{fill:var(--paper); stroke:var(--maroon); stroke-width:4}
 #graph text{fill:var(--muted); font-size:19px; font-weight:700; font-family:inherit}
-#graph .daydate{font-size:12px; font-variant-numeric:tabular-nums}
+#graph .daydate{font-size:17px; font-variant-numeric:tabular-nums}
 #graph .evmark{fill:var(--maroon)}
 #graph .axlabel{fill:var(--ink)}
 

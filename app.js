@@ -84,7 +84,8 @@ function fmtFt(v){ var r=Math.round(v*100)/100; return (r===0?0:r).toFixed(2); }
 function yFn(yr,H){return function(v){return PADT+(yr.yMax-v)/(yr.yMax-yr.yMin)*(H-PADT-PADB);};}
 function dayLabel(m,dayOff){var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   var d=new Date(m.now.y,m.now.mo-1,m.now.d+dayOff);
-  return {day:names[d.getDay()], date:(d.getMonth()+1)+"/"+d.getDate()};}
+  function p2(n){return (n<10?"0":"")+n;}
+  return {day:names[d.getDay()], date:p2(d.getMonth()+1)+"/"+p2(d.getDate())};}
 function hourLbl(off){var mod=(((off%1440)+1440)%1440),h=Math.floor(mod/60);
   return h===0?"":(h<12?(h+"a"):h===12?"12p":((h-12)+"p"));}
 
@@ -126,9 +127,9 @@ function renderGraph(m){
   for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
     var mod=(((vmin%1440)+1440)%1440), mid=mod===0;
     add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:bot.toFixed(1)}));
-    if(mid){ var dl=dayLabel(m,Math.round(vmin/1440));   // weekday + subscript date
-      var tx=svg("text",{x:X(vmin).toFixed(1),y:(H-14),"text-anchor":"middle"}, dl.day);
-      tx.appendChild(svg("tspan",{class:"daydate",dx:3,dy:5}, dl.date)); add(tx);
+    if(mid){ var dl=dayLabel(m,Math.round(vmin/1440));   // weekday below the axis, mm/dd date above the chart
+      add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, dl.day));
+      add(svg("text",{class:"daydate",x:X(vmin).toFixed(1),y:21,"text-anchor":"middle"}, dl.date));
     } else if(mod===720){ add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, "12p")); }
   }
   // hi/lo markers + subtle time/height badges
