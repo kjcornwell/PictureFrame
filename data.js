@@ -125,18 +125,14 @@ function fmtClock(min){
 function assemble(now, todayKey, win, events, cur, water, air, wind, press, hum, isMock){
   var dObj=new Date(now.y, now.mo-1, now.d, now.h, now.m);
   var sun=window.SunCalc.getTimes(dObj, C.lat, C.lon);
-  var ill=window.SunCalc.getMoonIllumination(dObj);
-  var mt=window.SunCalc.getMoonTimes(dObj, C.lat, C.lon);
-  var nextEv=null, nextLbl="--";
-  if(mt.rise&&mt.rise>dObj){nextEv=mt.rise;} if(mt.set&&mt.set>dObj&&(!nextEv||mt.set<nextEv)){nextEv=mt.set;}
-  if(nextEv){nextLbl=minClock(nextEv);}
+  var ill=window.SunCalc.getMoonIllumination(new Date());   // true instant, independent of device timezone
   return {
     stationName:C.stationName, now:now, dateLabel:fmtDate(dObj), todayKey:todayKey,
     curve:win.curve, startOff:win.startOff, endOff:win.endOff, marks:(win.marks||[]), events:events,
     current:{height:cur.v, rising:cur.rising},
     water:water, air:air, wind:wind, pressure:press, humidity:hum,
     sun:{rise:minClock(sun.sunrise), set:minClock(sun.sunset)},
-    moon:{name:phaseName(ill.phase), illum:ill.fraction, phase:ill.phase, next:nextLbl},
+    moon:{name:phaseName(ill.phase), illum:ill.fraction, phase:ill.phase},
     isMock:isMock
   };
 }
@@ -157,10 +153,10 @@ window.__tzMins=function(d){
 function fmtDate(d){var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   return mo[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();}
 function phaseName(p){
-  if(p<0.03||p>0.97)return "New Moon";
-  if(p<0.22)return "Wax Cres"; if(p<0.28)return "First Qtr"; if(p<0.47)return "Wax Gib";
-  if(p<0.53)return "Full Moon"; if(p<0.72)return "Wan Gib"; if(p<0.78)return "Last Qtr";
-  return "Wan Cres";
+  if(p<0.02||p>0.98)return "New Moon";
+  if(p<0.23)return "Waxing Crescent"; if(p<0.27)return "First Quarter"; if(p<0.48)return "Waxing Gibbous";
+  if(p<0.52)return "Full Moon"; if(p<0.73)return "Waning Gibbous"; if(p<0.77)return "Last Quarter";
+  return "Waning Crescent";
 }
 
 // ---- mock: synthetic semidiurnal tides across several days ----

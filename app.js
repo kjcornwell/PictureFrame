@@ -42,7 +42,8 @@ function renderHeader(m){
 }
 function renderFooter(m){
   $("sunrise").textContent=m.sun.rise; $("sunset").textContent=m.sun.set;
-  $("moon-name").textContent=m.moon.name; $("moon-next").textContent="Next "+m.moon.next;
+  $("moon-name").textContent=m.moon.name;
+  $("moon-pct").textContent=isFinite(m.moon.illum)?(Math.round(m.moon.illum*100)+"% lit"):"";
   var ic=$("moon-ic"); clear(ic); ic.appendChild(moonSVG(m.moon.illum, m.moon.phase<0.5));
 }
 // SVG moon phase disk. illum 0..1, waxing=lit on right. At quarter (illum=0.5) terminator is a straight diameter.
