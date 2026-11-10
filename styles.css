@@ -90,9 +90,11 @@ body{
 /* ---------- FOOTER ---------- */
 #foot{
   flex:none; height:58px; margin-top:8px; border-top:2px solid var(--line);
-  display:flex; align-items:center; gap:22px; font-size:20px; font-weight:700; white-space:nowrap;
+  display:flex; align-items:center; gap:12px; font-size:20px; font-weight:700; white-space:nowrap;
   padding-left:92px;   /* clear the kiosk menu button (bottom-left 72x48dp) */
 }
+.fcell{display:flex; align-items:center; gap:18px; flex:none; height:42px; padding:0 14px;
+  border:1.5px solid var(--hair); border-radius:10px}
 .fitem{display:flex; align-items:center; gap:8px; flex:none}
 #foot .flabel{color:var(--muted); font-weight:700}
 .sun{stroke:var(--ink)}
