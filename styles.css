@@ -56,7 +56,10 @@ body{
 #events .etmrw{font-size:16px; font-weight:700; color:var(--muted); font-style:italic; margin-left:8px}
 
 /* ---------- GRAPH (48h visible, scrollable through config.chartDays + pinned y-axis) ---------- */
-#graph-wrap{flex:1 1 auto; margin-top:12px; border-top:2px solid var(--line); min-height:0; display:flex}
+#graph-wrap{flex:1 1 auto; margin-top:12px; border-top:2px solid var(--line); min-height:0; display:flex; position:relative}
+#chart-reset{position:absolute; top:4px; right:0; z-index:2; border:0; border-radius:22px; padding:10px 20px;
+  background:var(--maroon); color:var(--paper); font-family:inherit; font-size:19px; font-weight:800; line-height:1; cursor:pointer}
+#chart-reset[hidden]{display:none}
 #yaxis{width:52px; height:100%; flex:none; display:block}
 #graph-scroll{flex:1 1 auto; height:100%; min-width:0; overflow-x:auto; overflow-y:hidden;
   -webkit-overflow-scrolling:touch; scrollbar-width:none}

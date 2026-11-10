@@ -202,7 +202,15 @@ function refresh(){
   window.OceanData.load().then(function(m){render(m);if(!m.isMock)cacheSave(m);})
    .catch(function(e){console.log("[OceanTide]",e);var c=cacheLoad();if(c)render(c);});
 }
-startClock();
+// "Reset" button: appears once the chart is dragged away from now, jumps back on tap.
+function initChartReset(){
+  var scroll=$("graph-scroll"), btn=$("chart-reset"); if(!scroll||!btn) return;
+  function sync(){ btn.hidden = scroll.scrollLeft < 12; }
+  scroll.addEventListener("scroll", sync);
+  btn.addEventListener("click", function(){ scroll.scrollLeft=0; sync(); });
+  sync();
+}
+startClock(); initChartReset();
 var cached=cacheLoad(); if(cached){try{render(cached);}catch(e){}}
 refresh();
 // Full data refresh on the configured cadence (fetches in live mode).
