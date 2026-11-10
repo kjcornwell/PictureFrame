@@ -24,11 +24,6 @@ function renderHeader(m){
   var vp=$("vs-pred"); clear(vp); vp.appendChild(el("span",{class:"vs-dash"}));
   vp.appendChild(document.createTextNode(m.isMock?" predicted":" prediction"));
   $("date").textContent=m.dateLabel;
-  var st=$("status"); clear(st);
-  var bars=svg("svg",{width:"26",height:"16",viewBox:"0 0 26 16"});
-  [[0,11,5,"var(--ink)"],[6,8,8,"var(--ink)"],[12,4,12,"var(--ink)"],[18,0,16,"var(--hair)"]].forEach(function(b){
-    bars.appendChild(svg("rect",{x:b[0],y:b[1],width:4,height:b[2],fill:b[3]}));});
-  st.appendChild(bars);
   var ul=$("events"); clear(ul);
   m.events.forEach(function(e){
     var li=el("li");
@@ -235,7 +230,31 @@ function initChartReset(){
   btn.addEventListener("click", function(){ goHome(); arm(); });
   sync();
 }
-startClock(); initChartReset();
+// Self-update: compare the deployed version.json with the version this page was loaded as (?v=N on app.js)
+// and reload onto the new build when they differ. A failed check is ignored; a given target is tried once per 30 min.
+function ownVersion(){
+  var s=document.querySelector('script[src*="app.js"]'), m=s&&/[?&]v=(\d+)/.exec(s.getAttribute("src")||"");
+  return m?parseInt(m[1],10):null;
+}
+function startSelfUpdate(){
+  var mine=ownVersion(); if(mine===null){ console.log("[OceanTide] self-update off: no ?v= on app.js"); return; }
+  var every=Math.max(1,parseInt(C.updateCheckMinutes,10)||5)*60000, KEY="oceanTideUpdateTry";
+  function check(){
+    fetch("version.json?t="+Date.now(),{cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(function(j){
+        var remote=parseInt(j&&j.v,10); if(!isFinite(remote)||remote===mine) return;
+        var last=null; try{ last=JSON.parse(localStorage.getItem(KEY)||"null"); }catch(e){}
+        if(last&&last.v===remote&&Math.abs(Date.now()-last.t)<30*60000) return;
+        try{ localStorage.setItem(KEY,JSON.stringify({v:remote,t:Date.now()})); }catch(e){}
+        console.log("[OceanTide] updating v"+mine+" -> v"+remote);
+        location.replace(location.pathname+"?v="+remote);
+      })
+      .catch(function(e){ console.log("[OceanTide] update check failed:",e&&e.message); });
+  }
+  setTimeout(check,60000); setInterval(check,every);
+}
+startClock(); initChartReset(); startSelfUpdate();
 var cached=cacheLoad(); if(cached){try{render(cached);}catch(e){}}
 refresh();
 // Full data refresh on the configured cadence (fetches in live mode).

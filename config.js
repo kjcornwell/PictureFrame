@@ -13,6 +13,8 @@ window.CONFIG = {
   // Day/night auto-dim schedule (local hours, 24h). Night = dark theme.
   nightStart: 21, nightEnd: 6,
   refreshMinutes: 30,
+  // How often the page checks version.json for a newer deployed build and reloads itself.
+  updateCheckMinutes: 5,
   // How many days of future tide predictions the chart can be scrolled through.
   chartDays: 30,
   // How many days of past tides the chart can be scrolled back through.
