@@ -27,11 +27,13 @@ body{
 #head-left{flex:1 1 56%; min-width:0; display:flex; flex-direction:column}
 #head-right{flex:0 0 40%; border-left:2px solid var(--line); padding-left:22px; display:flex; flex-direction:column}
 
+#loc{display:flex; align-items:baseline; gap:18px; margin-bottom:10px; min-width:0}
 #station{
   font-size:40px; font-weight:800; letter-spacing:-.01em; line-height:1;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:10px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;
 }
-#conditions{display:flex; gap:30px; align-items:center; font-size:26px; font-weight:700; margin-bottom:12px}
+#clock{font-size:34px; font-weight:800; color:var(--maroon); font-variant-numeric:tabular-nums; white-space:nowrap; flex:none}
+#conditions{display:flex; gap:26px; align-items:center; font-size:25px; font-weight:700; margin-bottom:12px}
 .cond{display:flex; align-items:center; gap:9px}
 .ic{width:26px; height:26px; fill:none; stroke:var(--ink); stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:none}
 #asof{font-size:20px; color:var(--muted); margin-bottom:6px}
@@ -53,10 +55,17 @@ body{
 #events .etime{letter-spacing:-.01em}
 #events .etmrw{font-size:16px; font-weight:700; color:var(--muted); font-style:italic; margin-left:8px}
 
-/* ---------- GRAPH ---------- */
-#graph-wrap{flex:1 1 auto; margin-top:12px; border-top:2px solid var(--line); min-height:0}
-#graph{width:100%; height:100%; display:block}
+/* ---------- GRAPH (scrollable 48h window + pinned y-axis) ---------- */
+#graph-wrap{flex:1 1 auto; margin-top:12px; border-top:2px solid var(--line); min-height:0; display:flex}
+#yaxis{width:52px; height:100%; flex:none; display:block}
+#graph-scroll{flex:1 1 auto; height:100%; min-width:0; overflow-x:auto; overflow-y:hidden;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none}
+#graph-scroll::-webkit-scrollbar{height:0;background:transparent}
+#graph{height:100%; display:block}
 #graph .axis{stroke:var(--line); stroke-width:2}
+#yaxis .axis{stroke:var(--line); stroke-width:2}
+#yaxis text{fill:var(--ink); font-size:19px; font-weight:700; font-family:inherit}
+#graph .daysep{stroke:var(--line); stroke-width:1.4}
 #graph .grid{stroke:var(--grid); stroke-width:1.4}
 #graph .gridv{stroke:var(--grid); stroke-width:1.4; stroke-dasharray:3 6}
 #graph .curve{fill:none; stroke:var(--line); stroke-width:3.2}
@@ -71,7 +80,8 @@ body{
 /* ---------- FOOTER ---------- */
 #foot{
   flex:none; height:58px; margin-top:8px; border-top:2px solid var(--line);
-  display:flex; align-items:center; gap:46px; font-size:23px; font-weight:700;
+  display:flex; align-items:center; gap:42px; font-size:23px; font-weight:700;
+  padding-left:92px;   /* clear the kiosk menu button (bottom-left 72x48dp) */
 }
 .fitem{display:flex; align-items:center; gap:11px}
 .sun{stroke:var(--ink)}

@@ -15,6 +15,7 @@ function fmt12(min){var h=Math.floor(min/60),mm=min%60,ap=h>=12?"PM":"AM";h=h%12
 function renderHeader(m){
   $("station").textContent=m.stationName;
   $("water").textContent=m.water; $("wind").textContent=m.wind; $("pressure").textContent=m.pressure;
+  $("humidity").textContent=m.humidity||"--";
   $("asof").textContent="as of "+fmt12(m.now.min).toLowerCase();
   $("cur-dir").textContent=m.current.rising?"▲":"▼";
   $("cur-height").textContent=m.current.height.toFixed(1);
@@ -57,51 +58,96 @@ function moonSVG(illum, waxing){
   s.appendChild(svg("path",{d:d,fill:"var(--ink)"}));
   return s;
 }
-function interpV(curve,min){var i=0;for(;i<curve.length-1;i++){if(curve[i+1].min>=min)break;}
-  var a=curve[i],b=curve[Math.min(i+1,curve.length-1)];if(b.min===a.min)return a.v;
-  return a.v+(b.v-a.v)*((min-a.min)/(b.min-a.min));}
-function triPath(x,y,type){var d=6;return type==="H"
+function interpV(curve,off){var i=0;for(;i<curve.length-1;i++){if(curve[i+1].off>=off)break;}
+  var a=curve[i],b=curve[Math.min(i+1,curve.length-1)];if(b.off===a.off)return a.v;
+  return a.v+(b.v-a.v)*((off-a.off)/(b.off-a.off));}
+function triPath(x,y,type){var d=7;return type==="H"
   ?"M"+(x-d)+","+(y+d)+" L"+(x+d)+","+(y+d)+" L"+x+","+(y-d)+" Z"
   :"M"+(x-d)+","+(y-d)+" L"+(x+d)+","+(y-d)+" L"+x+","+(y+d)+" Z";}
 
-function renderGraph(m){
-  var g=$("graph"); clear(g);
-  var W=1200,H=360,padL=58,padR=16,padT=20,padB=34, pw=W-padL-padR, ph=H-padT-padB;
-  var vs=m.curve.map(function(p){return p.v;}).concat(m.events.map(function(e){return e.v;}));
-  var maxV=Math.max.apply(null,vs),minV=Math.min.apply(null,vs);
+var PADT=30, PADB=46;  // graph top/bottom padding (px)
+function yRange(m){
+  var vs=m.curve.map(function(p){return p.v;}).concat((m.marks||[]).map(function(e){return e.v;}));
+  var maxV=Math.max.apply(null,vs), minV=Math.min.apply(null,vs);
   var yMax=Math.ceil((maxV+0.4)/2)*2; if(yMax<2)yMax=2;
-  var yMin = (minV < -0.1) ? Math.floor((minV-0.2)/2)*2 : 0;   // only dip below 0 for genuine negative tides
-  function X(min){return padL+(min/1440)*pw;}
-  function Y(v){return padT+(yMax-v)/(yMax-yMin)*ph;}
-  var add=function(n){g.appendChild(n);};
-  for(var t=yMin;t<=yMax;t+=2){
-    var y=Y(t);
-    add(svg("line",{class:t===0?"axis":"grid",x1:padL,y1:y.toFixed(1),x2:W-padR,y2:y.toFixed(1)}));
-    add(svg("text",{x:padL-10,y:(y+6).toFixed(1),"text-anchor":"end"}, t===yMax?(t+" ft"):(""+t)));
+  var yMin=(minV<-0.1)?Math.floor((minV-0.2)/2)*2:0;
+  return {yMax:yMax,yMin:yMin};
+}
+function yFn(yr,H){return function(v){return PADT+(yr.yMax-v)/(yr.yMax-yr.yMin)*(H-PADT-PADB);};}
+function dayAbbrev(m,dayOff){var names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return names[new Date(m.now.y,m.now.mo-1,m.now.d+dayOff).getDay()];}
+function hourLbl(off){var mod=(((off%1440)+1440)%1440),h=Math.floor(mod/60);
+  return h===0?"":(h<12?(h+"a"):h===12?"12p":((h-12)+"p"));}
+
+function renderYAxis(m,H){
+  var ya=$("yaxis"); clear(ya); var yr=yRange(m), Y=yFn(yr,H);
+  ya.setAttribute("viewBox","0 0 52 "+H);
+  for(var t=yr.yMin;t<=yr.yMax;t+=2){
+    ya.appendChild(svg("text",{x:46,y:(Y(t)+7).toFixed(1),"text-anchor":"end"}, t===yr.yMax?(t+" ft"):(""+t)));
   }
-  [0,360,720,1080,1440].forEach(function(mm){add(svg("line",{class:"gridv",x1:X(mm),y1:padT,x2:X(mm),y2:padT+ph}));});
-  var pts=m.curve.map(function(p){return X(p.min).toFixed(1)+","+Y(p.v).toFixed(1);});
+  ya.appendChild(svg("line",{class:"axis",x1:51,y1:PADT,x2:51,y2:Y(yr.yMin).toFixed(1)}));
+}
+function renderGraph(m){
+  var scroll=$("graph-scroll"), g=$("graph");
+  var first=!g.getAttribute("data-drawn"), prev=scroll.scrollLeft;
+  var vw=scroll.clientWidth||1176, H=scroll.clientHeight||420, VIEW=48*60;
+  var yr=yRange(m), Y=yFn(yr,H), yMin=yr.yMin, yMax=yr.yMax;
+  var pxPerMin=vw/VIEW, totalMin=m.endOff-m.startOff;
+  var svgW=Math.max(vw, totalMin*pxPerMin);
+  function X(off){return (off-m.startOff)*pxPerMin;}
+  g.setAttribute("viewBox","0 0 "+svgW.toFixed(0)+" "+H); g.style.width=svgW.toFixed(0)+"px";
+  clear(g); var add=function(n){g.appendChild(n);};
+  // horizontal gridlines across full width
+  for(var t=yMin;t<=yMax;t+=2){ var y=Y(t);
+    add(svg("line",{class:t===0?"axis":"grid",x1:0,y1:y.toFixed(1),x2:svgW.toFixed(0),y2:y.toFixed(1)})); }
+  // vertical grid every 6h; heavier line + weekday at each midnight
+  for(var vmin=Math.ceil(m.startOff/360)*360; vmin<=m.endOff; vmin+=360){
+    var mid=(((vmin%1440)+1440)%1440)===0;
+    add(svg("line",{class:mid?"daysep":"gridv",x1:X(vmin).toFixed(1),y1:PADT,x2:X(vmin).toFixed(1),y2:Y(yMin).toFixed(1)}));
+    add(svg("text",{x:X(vmin).toFixed(1),y:(H-12),"text-anchor":"middle"}, mid?dayAbbrev(m,Math.round(vmin/1440)):hourLbl(vmin)));
+  }
+  // area + predicted curve
+  var pts=m.curve.map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
   var base=Y(Math.max(0,yMin)).toFixed(1);
-  add(svg("path",{class:"area",d:"M"+X(m.curve[0].min).toFixed(1)+","+base+" L"+pts.join(" L")+" L"+X(m.curve[m.curve.length-1].min).toFixed(1)+","+base+" Z"}));
+  add(svg("path",{class:"area",d:"M"+X(m.curve[0].off).toFixed(1)+","+base+" L"+pts.join(" L")+" L"+X(m.curve[m.curve.length-1].off).toFixed(1)+","+base+" Z"}));
   add(svg("path",{class:"curve",d:"M"+pts.join(" L")}));
-  var nowMin=m.now.min, curNow=interpV(m.curve,nowMin);
-  var past=m.curve.filter(function(p){return p.min<=nowMin;}).map(function(p){return X(p.min).toFixed(1)+","+Y(p.v).toFixed(1);});
-  past.push(X(nowMin).toFixed(1)+","+Y(curNow).toFixed(1));
+  // elapsed (maroon) up to now
+  var nowOff=m.now.min, curNow=interpV(m.curve,nowOff);
+  var past=m.curve.filter(function(p){return p.off<=nowOff;}).map(function(p){return X(p.off).toFixed(1)+","+Y(p.v).toFixed(1);});
+  past.push(X(nowOff).toFixed(1)+","+Y(curNow).toFixed(1));
   if(past.length>1)add(svg("path",{class:"past",d:"M"+past.join(" L")}));
-  m.events.forEach(function(e){if(!e.tmrw)add(svg("path",{class:"evmark",d:triPath(X(e.min),Y(e.v)-10,e.type)}));});
-  axisGlyphs(m).forEach(function(gl){add(svg("text",{class:"axlabel",x:X(gl.min).toFixed(1),y:padT+ph+26,"text-anchor":"middle","font-size":"16"},gl.ic));});
-  add(svg("line",{class:"nowline",x1:X(nowMin).toFixed(1),y1:padT,x2:X(nowMin).toFixed(1),y2:padT+ph}));
-  add(svg("circle",{class:"nowdot",cx:X(nowMin).toFixed(1),cy:Y(curNow).toFixed(1),r:8}));
-  [["12am",0,"start"],["6am",360,"middle"],["12pm",720,"middle"],["6pm",1080,"middle"],["12am",1440,"end"]].forEach(function(p){
-    add(svg("text",{x:X(p[1]).toFixed(1),y:H-6,"text-anchor":p[2]},p[0]));});
+  // hi/lo markers across the window
+  (m.marks||[]).forEach(function(e){ add(svg("path",{class:"evmark",d:triPath(X(e.off),Y(e.v)-16,e.type)})); });
+  // sun/moon glyphs
+  axisGlyphs(m).forEach(function(gl){ if(gl.off>=m.startOff&&gl.off<=m.endOff)
+    add(svg("text",{class:"axlabel",x:X(gl.off).toFixed(1),y:(H-36),"text-anchor":"middle","font-size":"30"},gl.ic)); });
+  // now line + dot
+  add(svg("line",{class:"nowline",x1:X(nowOff).toFixed(1),y1:PADT,x2:X(nowOff).toFixed(1),y2:Y(yMin).toFixed(1)}));
+  add(svg("circle",{class:"nowdot",cx:X(nowOff).toFixed(1),cy:Y(curNow).toFixed(1),r:11}));
+  g.setAttribute("data-drawn","1");
+  renderYAxis(m,H);
+  scroll.scrollLeft = first ? 0 : prev;   // first render shows now-12h..now+36h; keep user scroll after
 }
 function axisGlyphs(m){
-  var g=[],dObj=new Date(m.now.y,m.now.mo-1,m.now.d);
-  var sun=window.SunCalc.getTimes(dObj,C.lat,C.lon),mt=window.SunCalc.getMoonTimes(dObj,C.lat,C.lon);
-  function mins(d){return window.__tzMins ? window.__tzMins(d) : (d.getHours()*60+d.getMinutes());}
-  if(sun.sunrise)g.push({min:mins(sun.sunrise),ic:"☀"}); if(sun.sunset)g.push({min:mins(sun.sunset),ic:"☀"});
-  if(mt.rise)g.push({min:mins(mt.rise),ic:"☽"}); if(mt.set)g.push({min:mins(mt.set),ic:"☽"});
-  return g;
+  var out=[], dStart=Math.floor(m.startOff/1440), dEnd=Math.ceil(m.endOff/1440);
+  function tzmin(d){return window.__tzMins?window.__tzMins(d):(d.getHours()*60+d.getMinutes());}
+  for(var dd=dStart; dd<=dEnd; dd++){
+    var dObj=new Date(m.now.y,m.now.mo-1,m.now.d+dd);
+    var sun=window.SunCalc.getTimes(dObj,C.lat,C.lon), mt=window.SunCalc.getMoonTimes(dObj,C.lat,C.lon);
+    if(sun.sunrise)out.push({off:dd*1440+tzmin(sun.sunrise),ic:"☀"});
+    if(sun.sunset)out.push({off:dd*1440+tzmin(sun.sunset),ic:"☀"});
+    if(mt.rise)out.push({off:dd*1440+tzmin(mt.rise),ic:"☽"});
+    if(mt.set)out.push({off:dd*1440+tzmin(mt.set),ic:"☽"});
+  }
+  return out;
+}
+function startClock(){
+  function tick(){ try{
+    var p={}; new Intl.DateTimeFormat("en-US",{timeZone:C.tz,hour:"numeric",minute:"2-digit",hour12:true})
+      .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+    $("clock").textContent=p.hour+":"+p.minute+" "+(p.dayPeriod||"");
+  }catch(e){} }
+  tick(); setInterval(tick,1000);
 }
 var lastModel=null;
 function render(m){ lastModel=m; applyTheme(m.now.h);renderHeader(m);renderFooter(m);renderGraph(m);}
@@ -111,6 +157,7 @@ function refresh(){
   window.OceanData.load().then(function(m){render(m);if(!m.isMock)cacheSave(m);})
    .catch(function(e){console.log("[OceanTide]",e);var c=cacheLoad();if(c)render(c);});
 }
+startClock();
 var cached=cacheLoad(); if(cached){try{render(cached);}catch(e){}}
 refresh();
 // Full data refresh on the configured cadence (fetches in live mode).
